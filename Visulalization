@@ -1,0 +1,481 @@
+cnv = read.csv("1Mv3_Sum_Merged_PC_QS_.txt",header = TRUE, sep = "\t")
+colnames(cnv)[2]<-"ID"
+CNV.penn_cnv <- read.table("PC_1Mv3_PennCNV_All_Format.txt", header = TRUE, sep = "\t") 
+CNV.quantiSNP<- read.table("QS_1Mv3_QuantiSNP_All_Format.txt", header = TRUE, sep = "\t") 
+
+
+visualisation<-function(individual_directory,cnv.l=cnv.l,penn_cnv=0,quantisnp=0,individual_choose=NULL,png=0,pdf=1){
+
+
+  if(png==1){
+    print("png")
+  }
+  if(pdf==1){  
+    print("pdf")
+  }  
+  
+#*****************************************************************************
+
+if(individual_choose==c(1,1)){
+  nombre_ind<-unique(cnv.l$ID)
+  phase_terminer<-0
+  for( i in nombre_ind ){
+  
+  #*********************************************
+  #i<-"4543424114_R01C01"
+  #**************************
+    print(c("individu",i,"% terminer: ",(phase_terminer/length(nombre_ind)*100)))
+    phase_terminer=phase_terminer+1
+    cnv.i = subset(cnv.l, ID == i)
+  
+    cnv.dat.i = read.table(paste(paste(individual_directory,i,sep="/"),".snpp",sep=""), header = TRUE, sep = ",") 
+  
+    CNV.penn_cnv.i <-subset(CNV.penn_cnv,CNV.penn_cnv$ID==i)
+    CNV.quantiSNP.i <-subset(CNV.quantiSNP,CNV.quantiSNP$ID==i)
+    #head(CNV.penn_cnv.i)
+    #head(CNV.quantiSNP.i)
+
+    colnames(cnv.dat.i)[5]<-"Log.R.Ratio"
+    colnames(cnv.dat.i)[4]<-"B.Allele.Frequency"
+    colnames(cnv.dat.i)[6]<-"CNV.value"
+    head(cnv.dat.i)
+  
+    #Imprime les cnv pour lesquels il y a une incoherance entre les deux algorythme
+    table(cnv.i$Type)
+  
+    #Choix du chromosome des donnees par chromosome
+  
+    nb_chro<-unique(cnv.i$Chr)
+  
+  
+    for(c in nb_chro){
+      #*************
+      #c<-"chr4"
+      
+      #*****************
+      c<-substr(c,4,nchar(as.character(c)))
+      chr<-as.character(paste("chr",c,sep=""))
+      cnv.i.c<-subset(cnv.i,cnv.i$Chr == chr)
+    
+      if( penn_cnv!=0){
+       CNV.penn_cnv.i.c<-subset(CNV.penn_cnv.i,CNV.penn_cnv.i$CHR == chr)
+      }
+      if( quantisnp!=0){
+        CNV.quantiSNP.i.c<-subset(CNV.quantiSNP.i,CNV.quantiSNP.i$Chr == chr)
+      }
+    
+      chr1<-c
+      dat.i.c<-subset(cnv.dat.i,cnv.dat.i$Chr == chr1)
+    
+    
+    #head(cnv.i.c)
+    #head(dat.i.c)
+    #head(CNV.penn_cnv.i.c)
+    #head(CNV.quantiSNP.i.c)
+      if(png==1){
+        nompng<-paste(i,".png",sep="")
+        png(nompng,width = 850, height = 850)
+      }
+      if(pdf==1){  
+        nompdf<-paste(i,".pdf",sep="")
+        pdf(nompdf)
+      }
+      #affichage des cnv
+      #pdf("duplication84.pdf",onefile=T)
+    
+      for(j in (1:dim(cnv.i.c)[1])){
+      
+      #*****************************************
+      #      j=1
+      #********************************************
+        
+        #layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+        layout(matrix(c(1,2,3), 3, 1, byrow = TRUE))
+      
+        #graphique du shemas chromosome
+        Main1<-paste("Type detection ",cnv.i.c$Type[j],sep=" ")
+        Main2<-paste("Chromosome ",cnv.i.c$Chr[j],sep=" ")
+        Main3<-paste("individu",cnv.i.c$ID[j],sep = " ")
+        Main<-paste(Main1,Main2,sep=" ")
+        Main<-paste(Main,Main3,sep=" ")
+      
+        l<-length(cnv.i.c$ID)
+        positions.c = c(1,(cnv.i.c[l, "Loci.Stop"] + 200000))
+        #par(mfrow=c(1,1))
+      
+        #y3<-(dat.i.c$Log.R.Ratio-min(dat.i.c$Log.R.Ratio,na.rm = TRUE))/((max(dat.i.c$Log.R.Ratio,na.rm = TRUE)-min(dat.i.c$Log.R.Ratio,na.rm = TRUE)))
+        y3<-(dat.i.c$Log.R.Ratio-min(dat.i.c$Log.R.Ratio,na.rm = TRUE))/((max(dat.i.c$Log.R.Ratio,na.rm = TRUE)-min(dat.i.c$Log.R.Ratio,na.rm = TRUE)))
+      
+      
+        y1<-dat.i.c$Log.R.Ratio
+        y2<-dat.i.c$B.Allele.Frequency 
+        x<-dat.i.c$Position
+      
+        par(mar=c(4,4,3,4))   # par red?finit les marges du graphiques pour laisser de la place ? droite pour l'ajout d'un axe.
+      
+        # Le graphique (premi?re courbe noire)
+        plot(x, y3, axes=F, ylim=c(0,1), xlab="", ylab="",col="blue", main=Main,pch=".")
+        # zonne etudier
+        #rect(xleft=cnv.i.c$Loci.Start[j]-200000,ybottom=0,ytop =2,xright=cnv.i.c$Loci.Stop[j]+200000, border = "grey")
+      
+        # L?gende de l'axe Y de gauche
+        axis(2, ylim=c(0,1),col="black")
+        mtext("Log ratio",side=2,line=2.5)
+        box() # pour encadrer le graphique
+        # Ajout de la courbe rouge correspondant ? l'axe de droite
+        par(new=T) # Autorise la superposition des courbes et non le remplacement d'un graphique par un autre
+        plot(x, y2,  xlab= "Probes positions", ylab="", ylim=c(0,1), axes=F, col="red",cex=0.2)
+        # L?gende de l'axe Y de droite
+        mtext("B.Allele.Frequency",side=4,col="red",line=2.5)
+        axis(4, ylim=c(0,1), col="red",col.axis="red")
+        # AXE X
+      
+        axis(1,pretty(range(x),10)) # la commande pretty permet de ne pas afficher la totalit? des valeurs de x mais plut?t des intervalles
+        text_start<-paste("Start",cnv.i.c$Loci.Start[j],sep=" ")
+        text_stop<-paste("Stop",cnv.i.c$Loci.Stop[j],sep=" ")
+        texte<-paste(text_start,text_stop,sep=" ")
+        #mtext(texte,col="black",line=-19)
+      
+        cote<-(cnv.i.c[j, "Loci.Stop"]-cnv.i.c[j, "Loci.Start"])
+        #Ajout du cnv etudier
+        abline(v = (cnv.i.c$Loci.Start[j]- cote), col = "grey", lwd =1) 
+        abline(v = (cnv.i.c$Loci.Stop[j]+ cote), col = "grey", lwd = 1) 
+      
+      
+        #Affiche le graphique pour le cnv selectionner de maniere plus precise
+    
+      
+        positions = c((cnv.i.c[j, "Loci.Start"] - 100000),(cnv.i.c[j, "Loci.Stop"] + 100000))
+        essaie<-subset(dat.i.c,dat.i.c$Position>=cnv.i.c[j, "Loci.Start"])
+        essaie2<-subset(essaie,essaie$Position<=cnv.i.c[j, "Loci.Stop"])
+        #plot(essaie2$Log.R.Ratio,pch=16,cex=0.5)
+        #plot(dat.i.c$Position,y1,pch=16,cex=0.5,xlim = positions)
+        # comprend les donne du meme intervalle 
+        maximum<-max(essaie2$Log.R.Ratio,na.rm = TRUE)+2
+        minimum<-min(essaie2$Log.R.Ratio,na.rm = TRUE)-1
+        #plot(essaie2$Log.R.Ratio)
+      
+
+      
+        #Log ratio ***************************************************
+        plot(x,dat.i.c$CNV.value,pch=".", xlab= "", ylab="",ylim=c(0,5), axes=F, col="orange",cex=4,xlim = positions)
+        # L?gende de l'axe Y de droite
+        mtext("CNV Value",side=4,col="orange",line=2.5)
+        axis(4, ylim=c(0,5), col="orange",col.axis="orange")
+        # AXE X
+        #axis(1,pretty(range(dat.i.c$Position),10)) # la commande pretty permet de ne pas afficher la totalit? des valeurs de x mais plut?t des intervalles
+      
+        #mtext(texte,col="black",line=-13)
+      
+        #affiche quantiSNP
+        #decalage entre la valeur du cnv 
+        d=0.2
+        if( quantisnp!=0){
+          for (u in (1:dim(CNV.quantiSNP.i.c)[1] )){
+            segments(x0=CNV.quantiSNP.i.c$BP1[u],y0=CNV.quantiSNP.i.c$cn[u]+d,x1=CNV.quantiSNP.i.c$BP2[u],y1=CNV.quantiSNP.i.c$cn[u]+d,col= "brown",lty = 2, lwd =2)
+            }
+        }
+        if( penn_cnv!=0){
+          for (u in (1:dim(CNV.penn_cnv.i.c)[1] )){
+          segments(x0=CNV.penn_cnv.i.c$BP1[u],y0=CNV.penn_cnv.i.c$CN[u]+d,x1=CNV.penn_cnv.i.c$BP2[u],y1=CNV.penn_cnv.i.c$CN[u]+d,col= 'black',lty = 2, lwd =2)
+          }
+        }
+        par(new=T) # Autorise la superposition des courbes et non le remplacement d'un graphique par un autre
+      
+        # Le Log Ratio (premi?re courbe noire)
+        plot(x,y1,pch=16,cex=0.8,col = "blue", xlab = "Probes positions", ylab = "Log R ratio",main=texte , xlim = positions, ylim = c(minimum,maximum), cex.main = 0.8, cex.lab = 0.8)
+        legend(positions[2]-10000,minimum+4, legend=c("PennCNV", "Qantisnip"),
+             col=c("black", "brown"), lty=2:2, cex=0.4)
+        # L?gende de l'axe Y de gauche
+        #axis(2, ylim=c(0,1),col="black")
+        #box() # pour encadrer le graphique
+        # Ajout de la courbe rouge correspondant ? l'axe de droite
+      
+        text_start<-paste("Start",cnv.i.c$Loci.Start[j],sep=" ")
+        text_stop<-paste("Stop",cnv.i.c$Loci.Stop[j],sep=" ")
+        texte<-paste(text_start,text_stop,sep=" ")
+        abline(h = 0, col = "grey", lty = 2, lwd =1) 
+      
+        #Ajout du cnv etudier
+        abline(v = cnv.i.c$Loci.Start[j], col = "green", lty = 2, lwd =1) 
+        abline(v = cnv.i.c$Loci.Stop[j], col = "green", lty = 2, lwd = 1) 
+        #plot(dat.i.c$Position,dat.i.c$Log.R.Ratio,pch=".",cex=2, col = "azure4", xlab = "Probes positions", ylab = "Log R ratio", main =Main , xlim = positions, ylim = c(-2,2), cex.main = 0.8, cex.lab = 0.8)
+        #abline(h=0, col = "black", lty = 2, lwd = 2) 
+        #abline(v = cnv.i.c$Loci.Start[j], col = "green", lty = 2, lwd =2) 
+        #abline(v = cnv.i.c$Loci.Stop[j], col = "green", lty = 2, lwd = 2) 
+        #mtext(texte,col="black",line=-19)
+      
+      
+      
+      
+      
+      
+      #B allele frequency **************************************************************
+      
+      
+      
+        plot(x,dat.i.c$CNV.value,pch=".", xlab= "", ylab="",ylim=c(0,5), axes=F, col="orange",cex=4,xlim = positions)
+        # L?gende de l'axe Y de droite
+        mtext("CNV Value",side=4,col="orange",line=2.5)
+        axis(4, ylim=c(0,5), col="orange",col.axis="orange")
+        # AXE X
+      
+        #axis(1,pretty(range(x),10)) # la commande pretty permet de ne pas afficher la totalit? des valeurs de x mais plut?t des intervalles
+        text_start<-paste("Start",cnv.i.c$Loci.Start[j],sep=" ")
+        text_stop<-paste("Stop",cnv.i.c$Loci.Stop[j],sep=" ")
+        texte<-paste(text_start,text_stop,sep=" ")
+        #mtext(texte,col="black",line=-13)
+        # Ajout de la courbe rouge correspondant ? l'axe de droite
+      
+      
+        #affiche cnv par algorithme
+      
+        ##affiche quantiSNP
+        if( quantisnp!=0){
+          for (u in (1:dim(CNV.quantiSNP.i.c)[1] )){
+            segments(x0=CNV.quantiSNP.i.c$BP1[u],y0=CNV.quantiSNP.i.c$cn[u]+d,x1=CNV.quantiSNP.i.c$BP2[u],y1=CNV.quantiSNP.i.c$cn[u]+d,col= "brown",lty = 2, lwd =2)
+          }
+        }
+        if( penn_cnv!=0){
+          for (u in (1:dim(CNV.penn_cnv.i.c)[1] )){
+            segments(x0=CNV.penn_cnv.i.c$BP1[u],y0=CNV.penn_cnv.i.c$CN[u]+d,x1=CNV.penn_cnv.i.c$BP2[u],y1=CNV.penn_cnv.i.c$CN[u]+d,col= 'black',lty = 2, lwd =2)
+          }
+        }
+      
+        par(new=T) # Autorise la superposition des courbes et non le remplacement d'un graphique par un autre
+      
+        # B allele frequency
+        plot(dat.i.c$Position,y2,pch=16,cex=0.8,col = "red", xlab = "Probes positions", ylab = "B allele frequency",main=texte , xlim = positions, ylim = c(0,1), cex.main = 0.8, cex.lab = 0.8)
+      
+        # L?gende de l'axe Y de gauche
+        axis(2, ylim=c(0,1),col="red")
+      
+        box() # pour encadrer le graphique
+      
+        legend(positions[2]-20000,0.5, legend=c("PennCNV", "Qantisnip"),
+               col=c("black", "brown"), lty=2:2, cex=0.8)
+      
+      
+      
+        #Ajout du cnv etudier
+        abline(v = cnv.i.c$Loci.Start[j], col = "green", lty = 2, lwd =1) 
+        abline(v = cnv.i.c$Loci.Stop[j], col = "green", lty = 2, lwd = 1) 
+      
+        #plot(dat.i.c$Position, dat.i.c$B.Allele.Frequency,pch=".",cex=2, ylim = c(0, 1), col = "bisque4", xlab = "Probes positions", ylab = "B Allele Frequency",main = paste("type detection ",cnv.i.c$Type[j],sep=" "), xlim = positions, cex.main = 0.8, cex.lab = 0.8)
+        #abline(h = c(0.33, 0.66), col = "bisque", lty = 2)
+        #abline(v = cnv.i.c$Loci.Start[j], col = "green", lty = 2, lwd =2) 
+        #abline(v = cnv.i.c$Loci.Stop[j], col = "green", lty = 2, lwd = 2) 
+        #mtext(texte,col="black",line=-19)
+        }
+       
+        if(png==1){
+          dev.off()
+        }
+        if(pdf==1){  
+          dev.off()
+        }
+       
+      }
+    
+    
+      }
+  }
+    
+  if(individual_choose!=c(1,1)){
+    
+    if(png==1){
+      nompng<-paste(i,".png",sep="")
+      png(nompng,width = 850, height = 850)
+    }
+    if(pdf==1){  
+      nompdf<-paste(i,".pdf",sep="")
+      pdf(nompdf)
+    }
+    
+    
+    
+    i=individual_choose[1]
+    
+    cnv.i = subset(cnv.l, ID == i)
+    
+    cnv.dat.i = read.table(paste(paste(individual_directory,i,sep="/"),".snpp",sep=""), header = TRUE, sep = ",") 
+    
+    CNV.penn_cnv.i <-subset(CNV.penn_cnv,CNV.penn_cnv$ID==i)
+    CNV.quantiSNP.i <-subset(CNV.quantiSNP,CNV.quantiSNP$ID==i)
+    #head(CNV.penn_cnv.i)
+    #head(CNV.quantiSNP.i)
+    
+    colnames(cnv.dat.i)[5]<-"Log.R.Ratio"
+    colnames(cnv.dat.i)[4]<-"B.Allele.Frequency"
+    colnames(cnv.dat.i)[6]<-"CNV.value"
+    head(cnv.dat.i)
+    
+    #Imprime les cnv pour lesquels il y a une incoherance entre les deux algorythme
+    table(cnv.i$Type)
+    
+    #Choix du chromosome des donnees par chromosome
+    
+    nb_chro<-unique(cnv.i$Chr)
+    
+    c<-individual_choose[2]
+    c<-substr(c,4,nchar(as.character(c)))
+    chr<-as.character(paste("chr",c,sep=""))
+    cnv.i.c<-subset(cnv.i,cnv.i$Chr == chr)
+      
+    if( penn_cnv!=0){
+      CNV.penn_cnv.i.c<-subset(CNV.penn_cnv.i,CNV.penn_cnv.i$CHR == chr)
+    }
+    if( quantisnp!=0){
+      CNV.quantiSNP.i.c<-subset(CNV.quantiSNP.i,CNV.quantiSNP.i$Chr == chr)
+    }
+      
+    chr1<-c
+    dat.i.c<-subset(cnv.dat.i,cnv.dat.i$Chr == chr1)
+    for(j in (1:dim(cnv.i.c)[1])){
+    
+    #layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+    layout(matrix(c(1,2,3), 3, 1, byrow = TRUE))
+        
+    #graphique du shemas chromosome
+    Main1<-paste("Type detection ",cnv.i.c$Type[j],sep=" ")
+    Main2<-paste("Chromosome ",cnv.i.c$Chr[j],sep=" ")
+    Main3<-paste("individu",cnv.i.c$ID[j],sep = " ")
+    Main<-paste(Main1,Main2,sep=" ")
+    Main<-paste(Main,Main3,sep=" ")
+    
+    l<-length(cnv.i.c$ID)
+    positions.c = c(1,(cnv.i.c[l, "Loci.Stop"] + 200000))
+    
+    y3<-(dat.i.c$Log.R.Ratio-min(dat.i.c$Log.R.Ratio,na.rm = TRUE))/((max(dat.i.c$Log.R.Ratio,na.rm = TRUE)-min(dat.i.c$Log.R.Ratio,na.rm = TRUE)))
+    y1<-dat.i.c$Log.R.Ratio
+    y2<-dat.i.c$B.Allele.Frequency 
+    x<-dat.i.c$Position
+    par(mar=c(4,4,3,4))   # par red?finit les marges du graphiques pour laisser de la place ? droite pour l'ajout d'un axe.
+    # Le graphique (premi?re courbe noire)
+    plot(x, y3, axes=F, ylim=c(0,1), xlab="", ylab="",col="blue", main=Main,pch=".")
+        
+    axis(2, ylim=c(0,1),col="black")
+    mtext("Log ratio",side=2,line=2.5)
+    box() # pour encadrer le graphique
+    # Ajout de la courbe rouge correspondant ? l'axe de droite
+    par(new=T) # Autorise la superposition des courbes et non le remplacement d'un graphique par un autre
+    plot(x, y2,  xlab= "Probes positions", ylab="", ylim=c(0,1), axes=F, col="red",cex=0.2)
+    # L?gende de l'axe Y de droite
+    mtext("B.Allele.Frequency",side=4,col="red",line=2.5)
+    axis(4, ylim=c(0,1), col="red",col.axis="red")
+    # AXE X
+    axis(1,pretty(range(x),10)) # la commande pretty permet de ne pas afficher la totalit? des valeurs de x mais plut?t des intervalles
+    text_start<-paste("Start",cnv.i.c$Loci.Start[j],sep=" ")
+    text_stop<-paste("Stop",cnv.i.c$Loci.Stop[j],sep=" ")
+    texte<-paste(text_start,text_stop,sep=" ")
+    cote<-(cnv.i.c[j, "Loci.Stop"]-cnv.i.c[j, "Loci.Start"])
+    #Ajout du cnv etudier
+    
+    abline(v = (cnv.i.c$Loci.Start[j]- cote), col = "grey", lwd =1) 
+    abline(v = (cnv.i.c$Loci.Stop[j]+ cote), col = "grey", lwd = 1) 
+    #Affiche le graphique pour le cnv selectionner de maniere plus precise
+    
+    positions = c((cnv.i.c[j, "Loci.Start"] - 100000),(cnv.i.c[j, "Loci.Stop"] + 100000))
+    essaie<-subset(dat.i.c,dat.i.c$Position>=cnv.i.c[j, "Loci.Start"])
+    essaie2<-subset(essaie,essaie$Position<=cnv.i.c[j, "Loci.Stop"])
+    # comprend les donne du meme intervalle 
+        
+    maximum<-max(essaie2$Log.R.Ratio,na.rm = TRUE)+2
+    minimum<-min(essaie2$Log.R.Ratio,na.rm = TRUE)-1
+        
+    #Log ratio ***************************************************
+    plot(x,dat.i.c$CNV.value,pch=".", xlab= "", ylab="",ylim=c(0,5), axes=F, col="orange",cex=4,xlim = positions)
+    mtext("CNV Value",side=4,col="orange",line=2.5)
+    axis(4, ylim=c(0,5), col="orange",col.axis="orange")
+    d=0.2
+    if( quantisnp!=0){
+      for (u in (1:dim(CNV.quantiSNP.i.c)[1] )){
+        segments(x0=CNV.quantiSNP.i.c$BP1[u],y0=CNV.quantiSNP.i.c$cn[u]+d,x1=CNV.quantiSNP.i.c$BP2[u],y1=CNV.quantiSNP.i.c$cn[u]+d,col= "brown",lty = 2, lwd =2)
+        }
+      }
+    if( penn_cnv!=0){
+      for (u in (1:dim(CNV.penn_cnv.i.c)[1] )){
+        segments(x0=CNV.penn_cnv.i.c$BP1[u],y0=CNV.penn_cnv.i.c$CN[u]+d,x1=CNV.penn_cnv.i.c$BP2[u],y1=CNV.penn_cnv.i.c$CN[u]+d,col= 'black',lty = 2, lwd =2)
+      }
+    }
+    par(new=T) # Autorise la superposition des courbes et non le remplacement d'un graphique par un autre
+        
+    plot(x,y1,pch=16,cex=0.8,col = "blue", xlab = "Probes positions", ylab = "Log R ratio",main=texte , xlim = positions, ylim = c(minimum,maximum), cex.main = 0.8, cex.lab = 0.8)
+    legend(positions[2]-20000,0.5, legend=c("PennCNV", "Qantisnip"),
+           col=c("black", "brown"), lty=2:2, cex=0.8)
+    text_start<-paste("Start",cnv.i.c$Loci.Start[j],sep=" ")
+    text_stop<-paste("Stop",cnv.i.c$Loci.Stop[j],sep=" ")
+    texte<-paste(text_start,text_stop,sep=" ")
+    
+    abline(h = 0, col = "grey", lty = 2, lwd =1) 
+    
+    #Ajout du cnv etudier
+    abline(v = cnv.i.c$Loci.Start[j], col = "green", lty = 2, lwd =1) 
+    abline(v = cnv.i.c$Loci.Stop[j], col = "green", lty = 2, lwd = 1) 
+        
+    #B allele frequency **************************************************************
+        
+    plot(x,dat.i.c$CNV.value,pch=".", xlab= "", ylab="",ylim=c(0,5), axes=F, col="orange",cex=4,xlim = positions)
+    mtext("CNV Value",side=4,col="orange",line=2.5)
+    axis(4, ylim=c(0,5), col="orange",col.axis="orange")
+    text_start<-paste("Start",cnv.i.c$Loci.Start[j],sep=" ")
+    text_stop<-paste("Stop",cnv.i.c$Loci.Stop[j],sep=" ")
+    texte<-paste(text_start,text_stop,sep=" ")
+    ##affiche quantiSNP
+    if( quantisnp!=0){
+      for (u in (1:dim(CNV.quantiSNP.i.c)[1] )){
+        segments(x0=CNV.quantiSNP.i.c$BP1[u],y0=CNV.quantiSNP.i.c$cn[u]+d,x1=CNV.quantiSNP.i.c$BP2[u],y1=CNV.quantiSNP.i.c$cn[u]+d,col= "brown",lty = 2, lwd =2)
+      }
+    }
+    if( penn_cnv!=0){
+      for (u in (1:dim(CNV.penn_cnv.i.c)[1] )){
+        segments(x0=CNV.penn_cnv.i.c$BP1[u],y0=CNV.penn_cnv.i.c$CN[u]+d,x1=CNV.penn_cnv.i.c$BP2[u],y1=CNV.penn_cnv.i.c$CN[u]+d,col= 'black',lty = 2, lwd =2)
+      }
+    }
+        
+    par(new=T) # Autorise la superposition des courbes et non le remplacement d'un graphique par un autre
+        
+    # B allele frequency
+    plot(dat.i.c$Position,y2,pch=16,cex=0.8,col = "red", xlab = "Probes positions", ylab = "B allele frequency",main=texte , xlim = positions, ylim = c(0,1), cex.main = 0.8, cex.lab = 0.8)
+    axis(2, ylim=c(0,1),col="red")
+    box() # pour encadrer le graphique
+        
+    legend(positions[2]-20000,0.5, legend=c("PennCNV", "Qantisnip"),
+               col=c("black", "brown"), lty=2:2, cex=0.8)
+    #Ajout du cnv etudier
+    abline(v = cnv.i.c$Loci.Start[j], col = "green", lty = 2, lwd =1) 
+    abline(v = cnv.i.c$Loci.Stop[j], col = "green", lty = 2, lwd = 1) 
+    }
+    
+    if(png==1){
+      dev.off()
+    }
+    if(pdf==1){  
+      dev.off()
+    }
+    
+  }
+  
+ 
+}
+
+
+#visualisation(individual_directory = "individu",cnv=cnv,penn_cnv =CNV.penn_cnv,quantisnp=CNV.quantiSNP,individual_choose=c("4552401006_R01C02","chr6"),pdf = 0,png = 1)
+
+
+
+visualisation(individual_directory = "individu",cnv.l = cnv.l,penn_cnv =CNV.penn_cnv,quantisnp=CNV.quantiSNP,choosedirectorie=0,pdf = 0,png = 1)
+
+# calcul en parallell
+library(parallel)
+
+# Calculate the number of cores
+no_cores <- detectCores() - 1
+
+# Initiate cluster
+cl <- makeCluster(no_cores)
+
+mclapply(cl,visualisation(individual_directory = "individu",cnv.l = cnv.l,penn_cnv =CNV.penn_cnv,quantisnp=CNV.quantiSNP,choosedirectorie=0,pdf = 0,png = 1))
+
+stopCluster(cl)
+  
